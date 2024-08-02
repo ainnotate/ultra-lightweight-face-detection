@@ -32,14 +32,14 @@ def draw_rectangle(event, x, y, flags, param):
     elif event == cv2.EVENT_LBUTTONUP:
         drawing = False
         blurring_done = True
-        if y < iy and x < ix:
-            ROI = frame[y:iy, x:ix]
-            blur = cv2.GaussianBlur(ROI, (91,91), 0) 
-            frame[y:iy, x:ix] = blur
-        else:
-            ROI = frame[iy:y, ix:x]
-            blur = cv2.GaussianBlur(ROI, (91,91), 0) 
-            frame[iy:y, ix:x] = blur
+        min_x = min(x, ix)
+        max_x = max(x, ix)
+        min_y = min(y, iy)
+        max_y = max(y, iy)
+
+        ROI = frame[min_y:max_y, min_x:max_x]
+        blur = cv2.GaussianBlur(ROI, (91,91), 0) 
+        frame[min_y:max_y, min_x:max_x] = blur
 
 
 cv2.namedWindow("Image")
@@ -47,16 +47,9 @@ cv2.setMouseCallback("Image", draw_rectangle)
 
 in_folder = './output'
 
-@click.command()
-@click.option('-v','--video_source', default='/dev/video0')
-@click.option('-c','--confidence', type=float, default=0.5)
-def main(video_source, confidence):
+def main():
     global ix, iy, drawing, frame, blurring_done
-    detector = FaceDetector(model='model/public/ultra-lightweight-face-detection-rfb-320/FP16/ultra-lightweight-face-detection-rfb-320.xml',
-                            confidence_thr=confidence,
-                            overlap_thr=0.7)
     
-    #video = cv2.VideoCapture(video_source)
     img_files=glob.glob(in_folder+"/*.jpg")
 
     n_frames = 0
@@ -67,15 +60,6 @@ def main(video_source, confidence):
         print('idx = ', idx)
         frame = cv2.imread(img_files[idx])
         blurring_done = False
-
-        start_time = time.perf_counter()
-        bboxes, scores = detector.inference(frame)
-        end_time = time.perf_counter()
-
-        n_frames += 1
-        fps = 1.0 / (end_time - start_time)
-        fps_cum += fps
-        fps_avg = fps_cum / n_frames
 
         while True:
             if drawing:
